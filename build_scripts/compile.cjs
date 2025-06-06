@@ -91,8 +91,15 @@ function installEmscripten() {
     const emsdk = currentOS === 'windows' ? "emsdk.bat" : "./emsdk";
 
     console.log("Installing Emscripten version", EMSCRIPTEN_VERSION);
-    execSync(`${emsdk} install ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
-    execSync(`${emsdk} activate ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
+    
+    // Use bash -c for Unix systems to ensure consistent shell environment
+    if (currentOS === 'windows') {
+      execSync(`${emsdk} install ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
+      execSync(`${emsdk} activate ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
+    } else {
+      execSync(`bash -c "${emsdk} install ${EMSCRIPTEN_VERSION}"`, { stdio: 'inherit', windowsHide: true });
+      execSync(`bash -c "${emsdk} activate ${EMSCRIPTEN_VERSION}"`, { stdio: 'inherit', windowsHide: true });
+    }
     
     // Move into upstream/emscripten to run npm install if it exists
     const emscriptenPath = path.join(process.cwd(), "upstream", "emscripten");
@@ -216,7 +223,12 @@ function build(platformName, graphicsBackend, buildType) {
     const emsdkBatPath = path.join(process.env.EMSDK || '', 'emsdk.bat');
     
     if (fs.existsSync(emsdkPath) || fs.existsSync(emsdkBatPath)) {
-      execSync(`"${process.env.EMSDK}/emsdk" activate ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
+      // Use bash -c for Unix systems to ensure consistent shell environment
+      if (currentOS === 'windows') {
+        execSync(`"${process.env.EMSDK}/emsdk.bat" activate ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
+      } else {
+        execSync(`bash -c '"${process.env.EMSDK}/emsdk" activate ${EMSCRIPTEN_VERSION}'`, { stdio: 'inherit', windowsHide: true });
+      }
     }
 
     // Run CMake configure
@@ -263,48 +275,15 @@ function build(platformName, graphicsBackend, buildType) {
     
     fs.writeFileSync(path.join(webBuildPath, "package.json"), JSON.stringify(webPackageJson, null, 2));
     
-    // Create a comprehensive stub with all needed exports
+    // Create a minimal index.js
     const minimalIndex = `
 // Minimal hiber3d web module for development
-console.warn('Using hiber3d development stub - full compilation failed');
-
-// Stub Hiber3D object with minimal functionality
-const Hiber3D = {
-  onGunStateChangedEvent: () => {},
-  removeEventCallback: () => {},
-  // Add other commonly used Hiber3D methods as no-ops
-  ready: Promise.resolve(),
-  destroy: () => {}
-};
-
-// Stub useHiber3D hook
-const useHiber3D = () => ({
-  Hiber3D,
-  isReady: false,
-  error: new Error('Hiber3D engine not compiled - using development stub')
-});
-
-// Main createHiber3DApp function
-export const createHiber3DApp = (config) => {
-  console.warn('createHiber3DApp: Using development stub');
-  return {
-    Hiber3D,
-    useHiber3D,
-    ready: Promise.resolve(),
-    destroy: () => {}
-  };
-};
-
-// Vite plugin export
 export const hiber3DVitePlugin = () => ({
   name: 'hiber3d-dev-stub',
   configResolved(config) {
     console.warn('Using hiber3d development stub - full compilation failed');
   }
 });
-
-// Export Hiber3D and useHiber3D directly as well
-export { Hiber3D, useHiber3D };
 `;
     
     fs.writeFileSync(path.join(webBuildPath, "index.js"), minimalIndex);
