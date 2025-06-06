@@ -210,6 +210,7 @@ export const createHiber3DApp = ({ webGPU, webGL }) => {
       
       // Create the placeholder UI using React.createElement
       const placeholderElement = React.createElement('div', {
+        key: 'hiber3d-placeholder',
         style: {
           width: '100%',
           height: '100vh',
@@ -236,7 +237,7 @@ export const createHiber3DApp = ({ webGPU, webGL }) => {
       if (children) {
         return React.createElement('div', { style: { width: '100%', height: '100vh' } }, [
           placeholderElement,
-          children
+          React.cloneElement(children, { key: 'hiber3d-children' })
         ]);
       }
       
@@ -412,7 +413,7 @@ function build(platformName, graphicsBackend, buildType) {
     const emsdkPath = path.join(process.env.EMSDK || '', 'emsdk');
     const emsdkBatPath = path.join(process.env.EMSDK || '', 'emsdk.bat');
     
-    if (fs.existsSync(emsdkPath) || fs.existsSync(emsdkBatPath)) {
+    if (fs.existsSync(emsdkPath) || fs.existsExists(emsdkBatPath)) {
       // Use bash -c for Unix systems to ensure consistent shell environment
       if (currentOS === 'windows') {
         execSync(`"${process.env.EMSDK}/emsdk.bat" activate ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
