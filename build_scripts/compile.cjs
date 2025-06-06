@@ -164,8 +164,8 @@ function detectOS() {
   }
 }
 
-function createMinimalBuildStubs(BUILD_PATH, graphicsBackend) {
-  console.log("Creating minimal build structure to allow development server to start...");
+function createBuildStubs(BUILD_PATH, graphicsBackend) {
+  console.log(`Creating build structure for ${graphicsBackend}...`);
   
   // Create minimal build structure for web module
   const webBuildPath = path.join(BUILD_PATH, "web");
@@ -229,7 +229,35 @@ export const moduleFactory = () => {
   
   fs.writeFileSync(path.join(BUILD_PATH, "index.js"), minimalGameTemplateIndex);
   
-  console.log(`Created minimal build structure for ${graphicsBackend}.`);
+  console.log(`Created build structure for ${graphicsBackend}.`);
+}
+
+function updateBuildStubsAfterSuccess(BUILD_PATH, graphicsBackend) {
+  console.log(`Updating build structure after successful compilation for ${graphicsBackend}...`);
+  
+  // Check if GameTemplate.js was generated and update the index.js to use it
+  const gameTemplateJsPath = path.join(BUILD_PATH, "GameTemplate.js");
+  if (fs.existsSync(gameTemplateJsPath)) {
+    const gameTemplateIndex = `
+// GameTemplate module - compiled successfully
+import { moduleFactory } from './GameTemplate.js';
+export { moduleFactory };
+`;
+    fs.writeFileSync(path.join(BUILD_PATH, "index.js"), gameTemplateIndex);
+    console.log(`Updated GameTemplate_${graphicsBackend} to use compiled GameTemplate.js`);
+  }
+  
+  // Check if web module was generated and update accordingly
+  const webBuildPath = path.join(BUILD_PATH, "web");
+  const webModulePath = path.join(webBuildPath, "hiber3d_web.js");
+  if (fs.existsSync(webModulePath)) {
+    const webIndex = `
+// Hiber3D web module - compiled successfully
+export * from './hiber3d_web.js';
+`;
+    fs.writeFileSync(path.join(webBuildPath, "index.js"), webIndex);
+    console.log(`Updated @hiber3d/web to use compiled hiber3d_web.js`);
+  }
 }
 
 function build(platformName, graphicsBackend, buildType) {
@@ -271,6 +299,9 @@ function build(platformName, graphicsBackend, buildType) {
   if (!fs.existsSync(BUILD_PATH)) {
     fs.mkdirSync(BUILD_PATH, { recursive: true });
   }
+
+  // Always create build stubs first - this ensures Vite can resolve imports
+  createBuildStubs(BUILD_PATH, graphicsBackend);
 
   // Clear and touch ccache_stats.txt
   const ccacheStatsPath = path.join(BUILD_PATH, "ccache_stats.txt");
@@ -320,14 +351,13 @@ function build(platformName, graphicsBackend, buildType) {
       LDFLAGS: LINKER_FLAGS
     }});
 
+    // If build succeeded, update the stubs to use compiled outputs
+    updateBuildStubsAfterSuccess(BUILD_PATH, graphicsBackend);
+
   } catch (err) {
     console.error("Error during build:", err);
-    console.log("Build failed. This may be due to missing dependencies in the WebContainer environment.");
-    
-    // Create minimal build structure to prevent the dev server from failing
-    createMinimalBuildStubs(BUILD_PATH, graphicsBackend);
-    
-    console.log("Created minimal build structure. Development server should now start.");
+    console.log("Build failed. Using development stubs to allow dev server to start.");
+    // Build stubs are already created above, so no need to recreate them
     return; // Don't exit, continue to allow other builds
   }
 
