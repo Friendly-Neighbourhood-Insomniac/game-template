@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-import { hiber3DVitePlugin } from "@hiber3d/web/vite-plugin";
+import { hiber3DVitePlugin } from "@hiber3d/web";
 
 // https://vite.dev/config/
 export default defineConfig({
