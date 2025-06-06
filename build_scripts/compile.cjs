@@ -62,6 +62,15 @@ function installEmscripten() {
         fs.rmSync(emsdkDir, { recursive: true, force: true });
       }
       fs.renameSync(extractedDir, emsdkDir);
+      
+      // Make emsdk script executable after successful extraction
+      if (currentOS !== 'windows') {
+        const emsdkScriptPath = path.join(emsdkDir, 'emsdk');
+        if (fs.existsSync(emsdkScriptPath)) {
+          execSync(`chmod +x "${emsdkScriptPath}"`, { stdio: 'inherit', windowsHide: true });
+          console.log("Set executable permissions for emsdk script");
+        }
+      }
     } else {
       // If extraction failed, create the directory and try a different approach
       if (!fs.existsSync(emsdkDir)) {
