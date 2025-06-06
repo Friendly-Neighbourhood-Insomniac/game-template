@@ -164,6 +164,74 @@ function detectOS() {
   }
 }
 
+function createMinimalBuildStubs(BUILD_PATH, graphicsBackend) {
+  console.log("Creating minimal build structure to allow development server to start...");
+  
+  // Create minimal build structure for web module
+  const webBuildPath = path.join(BUILD_PATH, "web");
+  if (!fs.existsSync(webBuildPath)) {
+    fs.mkdirSync(webBuildPath, { recursive: true });
+  }
+  
+  // Create a minimal package.json for the web build
+  const webPackageJson = {
+    "name": "@hiber3d/web",
+    "version": "1.0.0",
+    "main": "index.js",
+    "exports": {
+      ".": "./index.js"
+    }
+  };
+  
+  fs.writeFileSync(path.join(webBuildPath, "package.json"), JSON.stringify(webPackageJson, null, 2));
+  
+  // Create a minimal index.js for web module
+  const minimalWebIndex = `
+// Minimal hiber3d web module for development
+export const createHiber3DApp = () => ({
+  Hiber3D: () => {
+    console.warn('Using hiber3d development stub - full compilation failed');
+    return null;
+  },
+  useHiber3D: () => {
+    console.warn('Using hiber3d development stub - full compilation failed');
+    return null;
+  }
+});
+`;
+  
+  fs.writeFileSync(path.join(webBuildPath, "index.js"), minimalWebIndex);
+  
+  // Create minimal GameTemplate module in the build root
+  const gameTemplatePackageJson = {
+    "name": `GameTemplate_${graphicsBackend}`,
+    "version": "1.0.0",
+    "main": "index.js",
+    "exports": {
+      ".": "./index.js"
+    }
+  };
+  
+  fs.writeFileSync(path.join(BUILD_PATH, "package.json"), JSON.stringify(gameTemplatePackageJson, null, 2));
+  
+  // Create minimal GameTemplate index.js
+  const minimalGameTemplateIndex = `
+// Minimal GameTemplate module for development
+export const moduleFactory = () => {
+  console.warn('Using GameTemplate_${graphicsBackend} development stub - full compilation failed');
+  return Promise.resolve({
+    // Minimal module interface
+    ready: Promise.resolve(),
+    // Add other expected exports as needed
+  });
+};
+`;
+  
+  fs.writeFileSync(path.join(BUILD_PATH, "index.js"), minimalGameTemplateIndex);
+  
+  console.log(`Created minimal build structure for ${graphicsBackend}.`);
+}
+
 function build(platformName, graphicsBackend, buildType) {
   console.log(`Building the project for '${platformName}' using '${graphicsBackend}' in ${buildType} mode...`);
 
@@ -255,38 +323,9 @@ function build(platformName, graphicsBackend, buildType) {
   } catch (err) {
     console.error("Error during build:", err);
     console.log("Build failed. This may be due to missing dependencies in the WebContainer environment.");
-    console.log("Creating minimal build structure to allow development server to start...");
     
     // Create minimal build structure to prevent the dev server from failing
-    const webBuildPath = path.join(BUILD_PATH, "web");
-    if (!fs.existsSync(webBuildPath)) {
-      fs.mkdirSync(webBuildPath, { recursive: true });
-    }
-    
-    // Create a minimal package.json for the web build
-    const webPackageJson = {
-      "name": "@hiber3d/web",
-      "version": "1.0.0",
-      "main": "index.js",
-      "exports": {
-        ".": "./index.js"
-      }
-    };
-    
-    fs.writeFileSync(path.join(webBuildPath, "package.json"), JSON.stringify(webPackageJson, null, 2));
-    
-    // Create a minimal index.js
-    const minimalIndex = `
-// Minimal hiber3d web module for development
-export const hiber3DVitePlugin = () => ({
-  name: 'hiber3d-dev-stub',
-  configResolved(config) {
-    console.warn('Using hiber3d development stub - full compilation failed');
-  }
-});
-`;
-    
-    fs.writeFileSync(path.join(webBuildPath, "index.js"), minimalIndex);
+    createMinimalBuildStubs(BUILD_PATH, graphicsBackend);
     
     console.log("Created minimal build structure. Development server should now start.");
     return; // Don't exit, continue to allow other builds
