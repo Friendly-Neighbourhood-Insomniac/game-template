@@ -210,7 +210,6 @@ export const createHiber3DApp = ({ webGPU, webGL }) => {
       
       // Create the placeholder UI using React.createElement
       const placeholderElement = React.createElement('div', {
-        key: 'hiber3d-placeholder',
         style: {
           width: '100%',
           height: '100vh',
@@ -236,7 +235,7 @@ export const createHiber3DApp = ({ webGPU, webGL }) => {
       // If children is provided and not a function, render it along with placeholder
       if (children) {
         return React.createElement('div', { style: { width: '100%', height: '100vh' } }, [
-          placeholderElement,
+          React.cloneElement(placeholderElement, { key: 'hiber3d-placeholder' }),
           React.cloneElement(children, { key: 'hiber3d-children' })
         ]);
       }
