@@ -201,7 +201,7 @@ function createBuildStubs(BUILD_PATH, graphicsBackend) {
 // Minimal hiber3d web module for development
 import React from 'react';
 
-console.warn('Using hiber3d development stub - compilation not complete');
+console.warn('Using hiber3d development stub - compilation in progress...');
 
 export const createHiber3DApp = ({ webGPU, webGL }) => {
   return {
@@ -297,7 +297,7 @@ body {
   // Create minimal GameTemplate index.js
   const minimalGameTemplateIndex = `
 // Minimal GameTemplate module for development
-console.warn('Using GameTemplate_${graphicsBackend} development stub - compilation not complete');
+console.warn('Using GameTemplate_${graphicsBackend} development stub - compilation in progress...');
 
 export const moduleFactory = () => {
   return Promise.resolve({
@@ -326,28 +326,78 @@ export interface GunStateChangedEvent {
 function updateBuildStubsAfterSuccess(BUILD_PATH, graphicsBackend) {
   console.log(`Updating build structure after successful compilation for ${graphicsBackend}...`);
   
-  // Check if GameTemplate.js was generated and update the index.js to use it
-  const gameTemplateJsPath = path.join(BUILD_PATH, "GameTemplate.js");
-  if (fs.existsSync(gameTemplateJsPath)) {
+  // List all files in BUILD_PATH to see what was actually generated
+  const buildFiles = fs.readdirSync(BUILD_PATH);
+  console.log(`Files in build directory: ${buildFiles.join(', ')}`);
+  
+  // Check for various possible GameTemplate files
+  const possibleGameTemplateFiles = [
+    'GameTemplate.js',
+    `GameTemplate_${graphicsBackend}.js`,
+    'GameTemplate.wasm',
+    'GameTemplate.mjs'
+  ];
+  
+  let gameTemplateJsPath = null;
+  for (const filename of possibleGameTemplateFiles) {
+    const fullPath = path.join(BUILD_PATH, filename);
+    if (fs.existsSync(fullPath)) {
+      console.log(`Found compiled file: ${filename}`);
+      if (filename.endsWith('.js') || filename.endsWith('.mjs')) {
+        gameTemplateJsPath = fullPath;
+        break;
+      }
+    }
+  }
+  
+  if (gameTemplateJsPath) {
+    const gameTemplateFilename = path.basename(gameTemplateJsPath);
     const gameTemplateIndex = `
 // GameTemplate module - compiled successfully
-import { moduleFactory } from './GameTemplate.js';
-export { moduleFactory };
+console.log('Using compiled GameTemplate module: ${gameTemplateFilename}');
+export * from './${gameTemplateFilename}';
 `;
     fs.writeFileSync(path.join(BUILD_PATH, "index.js"), gameTemplateIndex);
-    console.log(`Updated GameTemplate_${graphicsBackend} to use compiled GameTemplate.js`);
+    console.log(`Updated GameTemplate_${graphicsBackend} to use compiled ${gameTemplateFilename}`);
+  } else {
+    console.log(`No compiled GameTemplate JS file found in ${BUILD_PATH}`);
   }
   
   // Check if web module was generated and update accordingly
   const webBuildPath = path.join(BUILD_PATH, "web");
-  const webModulePath = path.join(webBuildPath, "hiber3d_web.js");
-  if (fs.existsSync(webModulePath)) {
-    const webIndex = `
+  if (fs.existsSync(webBuildPath)) {
+    const webFiles = fs.readdirSync(webBuildPath);
+    console.log(`Files in web build directory: ${webFiles.join(', ')}`);
+    
+    const possibleWebFiles = [
+      'hiber3d_web.js',
+      'hiber3d_web.mjs',
+      'web.js',
+      'web.mjs'
+    ];
+    
+    let webModulePath = null;
+    for (const filename of possibleWebFiles) {
+      const fullPath = path.join(webBuildPath, filename);
+      if (fs.existsSync(fullPath)) {
+        console.log(`Found compiled web file: ${filename}`);
+        webModulePath = fullPath;
+        break;
+      }
+    }
+    
+    if (webModulePath) {
+      const webFilename = path.basename(webModulePath);
+      const webIndex = `
 // Hiber3D web module - compiled successfully
-export * from './hiber3d_web.js';
+console.log('Using compiled Hiber3D web module: ${webFilename}');
+export * from './${webFilename}';
 `;
-    fs.writeFileSync(path.join(webBuildPath, "index.js"), webIndex);
-    console.log(`Updated @hiber3d/web to use compiled hiber3d_web.js`);
+      fs.writeFileSync(path.join(webBuildPath, "index.js"), webIndex);
+      console.log(`Updated @hiber3d/web to use compiled ${webFilename}`);
+    } else {
+      console.log(`No compiled web module found in ${webBuildPath}`);
+    }
   }
 }
 
@@ -433,20 +483,24 @@ function build(platformName, graphicsBackend, buildType) {
       `-B "${BUILD_PATH}"`,
     ].filter(Boolean).join(" ");
 
+    console.log(`Running CMake configure: ${cmakeCmd}`);
     execSync(cmakeCmd, { stdio: 'inherit', windowsHide: true });
 
     // Build with Ninja, passing linker flags
     const buildCmd = `cmake --build ${BUILD_PATH}`;
+    console.log(`Running build: ${buildCmd}`);
     execSync(buildCmd, { stdio: 'inherit', windowsHide: true, env: {
       ...process.env,
       LDFLAGS: LINKER_FLAGS
     }});
 
+    console.log(`Build completed successfully for ${graphicsBackend}`);
+    
     // If build succeeded, update the stubs to use compiled outputs
     updateBuildStubsAfterSuccess(BUILD_PATH, graphicsBackend);
 
   } catch (err) {
-    console.error("Error during build:", err);
+    console.error(`Error during ${graphicsBackend} build:`, err);
     console.log("Build failed. Using development stubs to allow dev server to start.");
     // Build stubs are already created above, so no need to recreate them
     return; // Don't exit, continue to allow other builds
