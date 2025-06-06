@@ -199,28 +199,49 @@ function createBuildStubs(BUILD_PATH, graphicsBackend) {
   // Create a minimal index.js for web module
   const minimalWebIndex = `
 // Minimal hiber3d web module for development
+import React from 'react';
+
 console.warn('Using hiber3d development stub - compilation not complete');
 
 export const createHiber3DApp = ({ webGPU, webGL }) => {
   return {
     Hiber3D: ({ children }) => {
       console.log('Hiber3D component rendered in development mode');
-      // Return a simple div that displays children
-      const div = document.createElement('div');
-      div.style.width = '100%';
-      div.style.height = '100vh';
-      div.style.backgroundColor = '#1a1a1a';
-      div.style.color = 'white';
-      div.style.display = 'flex';
-      div.style.alignItems = 'center';
-      div.style.justifyContent = 'center';
-      div.style.flexDirection = 'column';
-      div.innerHTML = '<h1>Hiber3D Development Mode</h1><p>C++ compilation in progress...</p>';
       
+      // Create the placeholder UI using React.createElement
+      const placeholderElement = React.createElement('div', {
+        style: {
+          width: '100%',
+          height: '100vh',
+          backgroundColor: '#1a1a1a',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column'
+        }
+      }, [
+        React.createElement('h1', { key: 'title' }, 'Hiber3D Development Mode'),
+        React.createElement('p', { key: 'message' }, 'C++ compilation in progress...')
+      ]);
+      
+      // Handle children properly
       if (typeof children === 'function') {
-        return children;
+        // If children is a render prop, call it to get the React element
+        const childrenResult = children();
+        return childrenResult || placeholderElement;
       }
-      return () => div;
+      
+      // If children is provided and not a function, render it along with placeholder
+      if (children) {
+        return React.createElement('div', { style: { width: '100%', height: '100vh' } }, [
+          placeholderElement,
+          children
+        ]);
+      }
+      
+      // Return the placeholder element
+      return placeholderElement;
     },
     useHiber3D: () => ({
       api: {
