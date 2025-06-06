@@ -412,7 +412,7 @@ function build(platformName, graphicsBackend, buildType) {
     const emsdkPath = path.join(process.env.EMSDK || '', 'emsdk');
     const emsdkBatPath = path.join(process.env.EMSDK || '', 'emsdk.bat');
     
-    if (fs.existsSync(emsdkPath) || fs.existsExists(emsdkBatPath)) {
+    if (fs.existsSync(emsdkPath) || fs.existsSync(emsdkBatPath)) {
       // Use bash -c for Unix systems to ensure consistent shell environment
       if (currentOS === 'windows') {
         execSync(`"${process.env.EMSDK}/emsdk.bat" activate ${EMSCRIPTEN_VERSION}`, { stdio: 'inherit', windowsHide: true });
