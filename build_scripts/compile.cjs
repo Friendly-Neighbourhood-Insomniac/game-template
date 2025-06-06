@@ -263,15 +263,48 @@ function build(platformName, graphicsBackend, buildType) {
     
     fs.writeFileSync(path.join(webBuildPath, "package.json"), JSON.stringify(webPackageJson, null, 2));
     
-    // Create a minimal index.js
+    // Create a comprehensive stub with all needed exports
     const minimalIndex = `
 // Minimal hiber3d web module for development
+console.warn('Using hiber3d development stub - full compilation failed');
+
+// Stub Hiber3D object with minimal functionality
+const Hiber3D = {
+  onGunStateChangedEvent: () => {},
+  removeEventCallback: () => {},
+  // Add other commonly used Hiber3D methods as no-ops
+  ready: Promise.resolve(),
+  destroy: () => {}
+};
+
+// Stub useHiber3D hook
+const useHiber3D = () => ({
+  Hiber3D,
+  isReady: false,
+  error: new Error('Hiber3D engine not compiled - using development stub')
+});
+
+// Main createHiber3DApp function
+export const createHiber3DApp = (config) => {
+  console.warn('createHiber3DApp: Using development stub');
+  return {
+    Hiber3D,
+    useHiber3D,
+    ready: Promise.resolve(),
+    destroy: () => {}
+  };
+};
+
+// Vite plugin export
 export const hiber3DVitePlugin = () => ({
   name: 'hiber3d-dev-stub',
   configResolved(config) {
     console.warn('Using hiber3d development stub - full compilation failed');
   }
 });
+
+// Export Hiber3D and useHiber3D directly as well
+export { Hiber3D, useHiber3D };
 `;
     
     fs.writeFileSync(path.join(webBuildPath, "index.js"), minimalIndex);
