@@ -6,7 +6,7 @@ import { hiber3DVitePlugin } from "@hiber3d/web/vite-plugin";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tsconfigPaths(), tailwindcss(), hiber3DVitePlugin()],
+  plugins: [react(), tsconfigPaths(), tailwindcss({ oxide: false }), hiber3DVitePlugin()],
   publicDir: "assets",
   base: "./",
 });
