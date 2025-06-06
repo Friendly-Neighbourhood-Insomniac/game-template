@@ -179,7 +179,9 @@ function createBuildStubs(BUILD_PATH, graphicsBackend) {
     "version": "1.0.0",
     "main": "index.js",
     "exports": {
-      ".": "./index.js"
+      ".": "./index.js",
+      "./vite-plugin": "./vite-plugin.js",
+      "./styles": "./styles.css"
     }
   };
   
@@ -188,19 +190,66 @@ function createBuildStubs(BUILD_PATH, graphicsBackend) {
   // Create a minimal index.js for web module
   const minimalWebIndex = `
 // Minimal hiber3d web module for development
-export const createHiber3DApp = () => ({
-  Hiber3D: () => {
-    console.warn('Using hiber3d development stub - full compilation failed');
-    return null;
-  },
-  useHiber3D: () => {
-    console.warn('Using hiber3d development stub - full compilation failed');
-    return null;
+console.warn('Using hiber3d development stub - compilation not complete');
+
+export const createHiber3DApp = ({ webGPU, webGL }) => {
+  return {
+    Hiber3D: ({ children }) => {
+      console.log('Hiber3D component rendered in development mode');
+      // Return a simple div that displays children
+      const div = document.createElement('div');
+      div.style.width = '100%';
+      div.style.height = '100vh';
+      div.style.backgroundColor = '#1a1a1a';
+      div.style.color = 'white';
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.justifyContent = 'center';
+      div.style.flexDirection = 'column';
+      div.innerHTML = '<h1>Hiber3D Development Mode</h1><p>C++ compilation in progress...</p>';
+      
+      if (typeof children === 'function') {
+        return children;
+      }
+      return () => div;
+    },
+    useHiber3D: () => ({
+      api: {
+        onGunStateChangedEvent: () => () => {},
+        removeEventCallback: () => {},
+        writeGunStateChangedEvent: () => {}
+      }
+    })
+  };
+};
+`;
+  
+  fs.writeFileSync(path.join(webBuildPath, "index.js"), minimalWebIndex);
+  
+  // Create minimal vite-plugin.js
+  const minimalVitePlugin = `
+// Minimal hiber3d vite plugin for development
+export const hiber3DVitePlugin = () => ({
+  name: 'hiber3d-dev-stub',
+  configResolved() {
+    console.warn('Using hiber3d vite plugin development stub');
   }
 });
 `;
   
-  fs.writeFileSync(path.join(webBuildPath, "index.js"), minimalWebIndex);
+  fs.writeFileSync(path.join(webBuildPath, "vite-plugin.js"), minimalVitePlugin);
+  
+  // Create minimal styles.css
+  const minimalStyles = `
+/* Minimal hiber3d styles for development */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+`;
+  
+  fs.writeFileSync(path.join(webBuildPath, "styles.css"), minimalStyles);
   
   // Create minimal GameTemplate module in the build root
   const gameTemplatePackageJson = {
@@ -208,7 +257,8 @@ export const createHiber3DApp = () => ({
     "version": "1.0.0",
     "main": "index.js",
     "exports": {
-      ".": "./index.js"
+      ".": "./index.js",
+      "./GameTemplate_webgpu": "./GameTemplate_webgpu.js"
     }
   };
   
@@ -217,10 +267,10 @@ export const createHiber3DApp = () => ({
   // Create minimal GameTemplate index.js
   const minimalGameTemplateIndex = `
 // Minimal GameTemplate module for development
+console.warn('Using GameTemplate_${graphicsBackend} development stub - compilation not complete');
+
 export const moduleFactory = () => {
-  console.warn('Using GameTemplate_${graphicsBackend} development stub - full compilation failed');
   return Promise.resolve({
-    // Minimal module interface
     ready: Promise.resolve(),
     // Add other expected exports as needed
   });
@@ -228,6 +278,17 @@ export const moduleFactory = () => {
 `;
   
   fs.writeFileSync(path.join(BUILD_PATH, "index.js"), minimalGameTemplateIndex);
+  
+  // Create minimal GameTemplate_webgpu.js with types
+  const minimalGameTemplateTypes = `
+// Minimal GameTemplate types for development
+export interface GunStateChangedEvent {
+  ammo: number;
+  hits: number;
+}
+`;
+  
+  fs.writeFileSync(path.join(BUILD_PATH, "GameTemplate_webgpu.js"), minimalGameTemplateTypes);
   
   console.log(`Created build structure for ${graphicsBackend}.`);
 }
